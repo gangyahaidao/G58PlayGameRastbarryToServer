@@ -39,7 +39,7 @@ int main(int argc, char* argv[])
 
     // 一些测试
     testStirngSplit();
-    return;
+    return 0;
 
 
     while(1) {
