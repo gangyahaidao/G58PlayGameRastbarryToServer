@@ -53,13 +53,18 @@ int main(int argc, char* argv[])
     }
 
     // 2.初始化zigbee协调器串口
-    bool open_flag = myopen_port(coorDevSerial, COORDINATOR_DEV_NAME, 115200);
-	if(!open_flag){
-		cout << "Open coor serial port failed, exit" << endl;
-        exit(-1);
-	} else {
-        cout << "Open coor serial port success" << endl;
-    }
+    while(1) {
+        bool open_flag = myopen_port(coorDevSerial, COORDINATOR_DEV_NAME, 115200);
+        if(!open_flag){
+            cout << "Open coor serial port failed, exit" << endl;
+            coorDevSerial.close();
+            sleep(5);
+            continue;
+        } else {
+            cout << "Open coor serial port success" << endl;
+            break;
+        }
+    }    
 
     // 3. 创建一个线程用于接收协调器上传的数据并发送到服务器
     if(pthread_create(&serial_port_thread, 0, serial_data_process_thread, 0)){
