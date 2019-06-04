@@ -25,6 +25,8 @@ void *serial_data_process_thread2(void* ptr);
 int sendSerialDateToServer(string content);
 void SplitString(const string& s, vector<string>& v, const string& c);
 
+void testStirngSplit(void);
+
 int main(int argc, char* argv[]) 
 {
     int ret = 0;
@@ -34,6 +36,12 @@ int main(int argc, char* argv[])
 	getline(file, SERVER_IP);
     // 1.初始化socket连接服务器
     cout << "connect to server ip = " << SERVER_IP << endl;
+
+    // 一些测试
+    testStirngSplit();
+    return;
+
+
     while(1) {
         ret = init_tcp_socket_client_block(&serialSocketfd, SERVER_IP.c_str(), server_port); // 192.168.2.105  www.g58mall.com
         if(ret < 0) {
@@ -197,8 +205,8 @@ void *serial_data_process_thread2(void* ptr) {
 void SplitString(const string& s, vector<string>& v, const string& c)
 {
     string::size_type pos1, pos2;
-    pos2 = s.find(c);
     pos1 = 0;
+    pos2 = s.find(c); // 查找字符串s中是否包含字符串c，string::npos是个特殊值
     while(string::npos != pos2)
     {
         v.push_back(s.substr(pos1, pos2-pos1));
@@ -214,4 +222,13 @@ int sendSerialDateToServer(string content) {
 	char sendBuf[64] = {0};
 	sprintf(sendBuf, "#%s@", content.c_str());
 	return sendTcpMsg(serialSocketfd, sendBuf, strlen(sendBuf)); // 发送
+}
+
+void testStirngSplit(void) {
+    string s = "#fjdfjkdjgf@#rrrrrrrrrrr@#llhhhhhhh";
+    vector<string> v;
+    SplitString(s, v,"@"); //可按多个字符来分隔;
+    for(vector<string>::size_type i = 0; i != v.size(); ++i)
+        cout << v[i] << "; ";
+    cout << endl;
 }
