@@ -22,6 +22,7 @@ struct timeval current_tv;
 bool myopen_port(serial::Serial& ser, std::string port_name, int baudrate);
 void *serial_data_process_thread(void* ptr);
 void *serial_data_process_thread2(void* ptr);
+int sendSerialDateToServer(string content);
 void SplitString(const string& s, vector<string>& v, const string& c);
 
 int main(int argc, char* argv[]) 
@@ -71,7 +72,7 @@ int main(int argc, char* argv[])
 	}
 
     // 5.发送socket初始注册消息
-    ret = sendSerialDateToServer("reg");
+    ret = sendSerialDateToServer("reg";
 	if(ret > 0) {
 		cout << "Send socket register cmd success" << endl;
 	}
@@ -100,7 +101,7 @@ int main(int argc, char* argv[])
 				cout << "Reconnect to server failed" << endl;
 			}else{ // 连接成功，发送货柜串口注册消息
 				cout << "Reconenct to server success, send register cmd again" << endl;
-				sendSerialDateToServer("reg");
+				sendSerialDateToServer("reg";
 				sendSerialDateToServer("heartbeat"); // 发送货柜串口心跳
 			}            
 			gettimeofday(&last_recvheartbeat_tv, NULL); // 更新时间，避免断开之后不停地重连
@@ -171,7 +172,7 @@ void *serial_data_process_thread2(void* ptr) {
             cout << "recv socket server data len = " << len << ", data = " << buffer << endl;
             string str = buffer;
             vector<string> vec;
-            SplitString(s, vec,"@"); // 按照字符进行分割，防止数据粘连
+            SplitString(str, vec,"@"); // 按照字符进行分割，防止数据粘连
             for(vector<string>::size_type i = 0; i < vec.size(); i++){
                 cout << vec[i] << " ";
                 if(vec[i].compare("#heartbeat@") == 0) { // 如果收到的是心跳数据
@@ -207,4 +208,10 @@ void SplitString(const string& s, vector<string>& v, const string& c)
     }
     if(pos1 != s.length())
         v.push_back(s.substr(pos1));
+}
+
+int sendSerialDateToServer(string content) {
+	char sendBuf[64] = {0};
+	sprintf(sendBuf, "#%s@", content.c_str());
+	return sendTcpMsg(serialSocketfd, sendBuf, strlen(sendBuf)); // 发送
 }
