@@ -70,6 +70,7 @@ int init_tcp_socket_client_noblock(int* sockfd, const char* serverHost, int port
 	}
 	//2.和服务器建立连接
 	struct sockaddr_in peer;
+	bzero(&peer, sizeof(peer));
 	peer.sin_family = AF_INET;
 	peer.sin_port = htons(port);
 	//inet_pton(AF_INET,serverHost,&peer.sin_addr);

@@ -11,24 +11,30 @@ extern "C" {
 #endif
 using namespace std;
 
-string SERVER_IP = "192.168.1.100";
 #define COORDINATOR_DEV_NAME "/dev/ttyUSB0"
 serial::Serial coorDevSerial; // 定义连接树莓派协调器的串口对象
 pthread_t serial_port_thread, serial_port_thread2;
 int serialSocketfd;
+struct timeval last_sendheartbeat_tv;
+struct timeval last_recvheartbeat_tv; // 上一次收到心跳的时间
+struct timeval current_tv;
 
 bool myopen_port(serial::Serial& ser, std::string port_name, int baudrate);
 void *serial_data_process_thread(void* ptr);
 void *serial_data_process_thread2(void* ptr);
+void SplitString(const string& s, vector<string>& v, const string& c);
 
 int main(int argc, char* argv[]) 
 {
     int ret = 0;
-
+    string SERVER_IP = "192.168.1.100";
+    int server_port = 9878;
+    fstream file("./server_ip.conf");//创建一个fstream文件流对象
+	getline(file, SERVER_IP);
     // 1.初始化socket连接服务器
     cout << "connect to server ip = " << SERVER_IP << endl;
     while(1) {
-        ret = init_tcp_socket_client_block(&serialSocketfd, SERVER_IP.c_str(), 9877); // 192.168.2.105  www.g58mall.com
+        ret = init_tcp_socket_client_block(&serialSocketfd, SERVER_IP.c_str(), server_port); // 192.168.2.105  www.g58mall.com
         if(ret < 0) {
             cout << "Connect to server failed, try again" << endl;
             sleep(5);
@@ -63,6 +69,44 @@ int main(int argc, char* argv[])
 	}else {
 		cout << "Create recv socket data thread success" << endl;
 	}
+
+    // 5.发送socket初始注册消息
+    ret = sendSerialDateToServer("reg");
+	if(ret > 0) {
+		cout << "Send socket register cmd success" << endl;
+	}
+
+    // 6.初始化计时器
+    gettimeofday(&current_tv,NULL);
+    gettimeofday(&last_sendheartbeat_tv, NULL);    
+	gettimeofday(&last_recvheartbeat_tv, NULL); // 更新心跳计时
+
+    while(1) {
+        // 每隔一秒钟发送一次心跳到服务器
+        gettimeofday(&current_tv, NULL);
+		if((current_tv.tv_sec - last_sendheartbeat_tv.tv_sec) >= 1) {
+			sendSerialDateToServer("heartbeat"); // 发送货柜串口心跳
+			gettimeofday(&last_sendheartbeat_tv, NULL);
+		}
+
+        // 及时判断服务器是否断开了连接，断开之后能自定进行连接
+        gettimeofday(&current_tv, NULL);
+		if((current_tv.tv_sec - last_recvheartbeat_tv.tv_sec) >= 5) { // 如果当前收到服务器的心跳超过指定时间，则认为断开连接，进行重连操作
+			serialSocketfd = -1;
+			perror("Recv server heartbeat time-out");
+			close(serialSocketfd); // 关闭文件描述符
+			int sock_ret = init_tcp_socket_client_block(&serialSocketfd, (char*)SERVER_IP.c_str(), server_port);
+			if(sock_ret < 0) {
+				cout << "Reconnect to server failed" << endl;
+			}else{ // 连接成功，发送货柜串口注册消息
+				cout << "Reconenct to server success, send register cmd again" << endl;
+				sendSerialDateToServer("reg");
+				sendSerialDateToServer("heartbeat"); // 发送货柜串口心跳
+			}            
+			gettimeofday(&last_recvheartbeat_tv, NULL); // 更新时间，避免断开之后不停地重连
+		}
+        usleep(1000*20);
+    }
     
 }
 
@@ -95,7 +139,6 @@ bool myopen_port(serial::Serial& ser, std::string port_name, int baudrate){
  * 功能：将串口发送上来的数据原样发送到服务器
 */
 void *serial_data_process_thread(void* ptr) {
-	char buffer[128] = {0};
 	unsigned char data_buf[64] = {0};
 	while(1) {
 		bzero(data_buf, 64);
@@ -115,6 +158,7 @@ void *serial_data_process_thread(void* ptr) {
 */
 void *serial_data_process_thread2(void* ptr) {
 	char buffer[128] = {0};
+    int ret = 0;
 	while(1) {
 		// 接收服务器数据
 		if(serialSocketfd == -1) {
@@ -122,16 +166,45 @@ void *serial_data_process_thread2(void* ptr) {
 			continue;
 		}
 		bzero(buffer, 128);
-		int len = recv(serialSocketfd, buffer, 128, MSG_DONTWAIT); // 非阻塞接收
+		int len = recv(serialSocketfd, buffer, 128, 0);
 		if(len > 0) { // 服务器端发送数据不能太频繁，否则数据会累积
             cout << "recv socket server data len = " << len << ", data = " << buffer << endl;
-			int ret = coorDevSerial.write((unsigned char*)buffer, len);
-			if(ret != len) {
-				cout << "Thread send socketdata to serial failed" << endl;
-			}
+            string str = buffer;
+            vector<string> vec;
+            SplitString(s, vec,"@"); // 按照字符进行分割，防止数据粘连
+            for(vector<string>::size_type i = 0; i < vec.size(); i++){
+                cout << vec[i] << " ";
+                if(vec[i].compare("#heartbeat@") == 0) { // 如果收到的是心跳数据
+                    gettimeofday(&last_recvheartbeat_tv, NULL); // 更新心跳计时
+                } else { // 将数据发送到协调器
+                    ret = coorDevSerial.write((unsigned char*)buffer, len);
+                    if(ret != len) {
+                        cout << "Thread send socketdata to serial failed" << endl;
+                    }
+                }
+            }                			
 		} else {
 			usleep(1000*10); // 休眠ms
 		}		
 	}
 	cout << "Exit serial_data_process_thread2" << endl;
+}
+
+/**
+ * 进行string字符串拆分
+*/
+void SplitString(const string& s, vector<string>& v, const string& c)
+{
+    string::size_type pos1, pos2;
+    pos2 = s.find(c);
+    pos1 = 0;
+    while(string::npos != pos2)
+    {
+        v.push_back(s.substr(pos1, pos2-pos1));
+         
+        pos1 = pos2 + c.size();
+        pos2 = s.find(c, pos1);
+    }
+    if(pos1 != s.length())
+        v.push_back(s.substr(pos1));
 }
