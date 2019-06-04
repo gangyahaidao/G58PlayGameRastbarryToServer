@@ -72,7 +72,7 @@ int main(int argc, char* argv[])
 	}
 
     // 5.发送socket初始注册消息
-    ret = sendSerialDateToServer("reg";
+    ret = sendSerialDateToServer("reg");
 	if(ret > 0) {
 		cout << "Send socket register cmd success" << endl;
 	}
@@ -101,7 +101,7 @@ int main(int argc, char* argv[])
 				cout << "Reconnect to server failed" << endl;
 			}else{ // 连接成功，发送货柜串口注册消息
 				cout << "Reconenct to server success, send register cmd again" << endl;
-				sendSerialDateToServer("reg";
+				sendSerialDateToServer("reg");
 				sendSerialDateToServer("heartbeat"); // 发送货柜串口心跳
 			}            
 			gettimeofday(&last_recvheartbeat_tv, NULL); // 更新时间，避免断开之后不停地重连
