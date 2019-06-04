@@ -18,6 +18,7 @@ int serialSocketfd;
 struct timeval last_sendheartbeat_tv;
 struct timeval last_recvheartbeat_tv; // 上一次收到心跳的时间
 struct timeval current_tv;
+string MACHINE_ID = "1";
 
 bool myopen_port(serial::Serial& ser, std::string port_name, int baudrate);
 void *serial_data_process_thread(void* ptr);
@@ -34,13 +35,10 @@ int main(int argc, char* argv[])
     int server_port = 9878;
     fstream file("./server_ip.conf");//创建一个fstream文件流对象
 	getline(file, SERVER_IP);
+    getline(file, MACHINE_ID);
+    file.close();
     // 1.初始化socket连接服务器
-    cout << "connect to server ip = " << SERVER_IP << endl;
-
-    // 一些测试
-    testStirngSplit();
-    return 0;
-
+    cout << "connect to server ip = " << SERVER_IP << ", MACHINE_ID = " << MACHINE_ID << endl;
 
     while(1) {
         ret = init_tcp_socket_client_block(&serialSocketfd, SERVER_IP.c_str(), server_port); // 192.168.2.105  www.g58mall.com
@@ -220,8 +218,8 @@ void SplitString(const string& s, vector<string>& v, const string& c)
 
 int sendSerialDateToServer(string content) {
 	char sendBuf[64] = {0};
-	sprintf(sendBuf, "#%s@", content.c_str());
-	return sendTcpMsg(serialSocketfd, sendBuf, strlen(sendBuf)); // 发送
+	sprintf(sendBuf, "#{\"machineId\":\"%s\",\"type\":\"%s\"}@", MACHINE_ID.c_str(), content.c_str());
+	return sendTcpMsg(serialSocketfd, sendBuf, strlen(sendBuf));
 }
 
 void testStirngSplit(void) {
