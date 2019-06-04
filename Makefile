@@ -8,7 +8,7 @@ LIBS = -lpthread -lserial
 
 SRCS = $(wildcard *.cpp)
 OBJS = $(patsubst %.cpp,%.o,$(SRCS))
-TARGETS = main
+TARGETS = mytask
 
 all:$(TARGETS)
 
