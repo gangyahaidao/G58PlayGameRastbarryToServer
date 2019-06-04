@@ -146,7 +146,7 @@ bool myopen_port(serial::Serial& ser, std::string port_name, int baudrate){
  * 功能：将串口发送上来的数据原样发送到服务器
 */
 void *serial_data_process_thread(void* ptr) {
-	unsigned char data_buf[64] = {0};
+	uint8_t data_buf[64] = {0};
 	while(1) {
 		bzero(data_buf, 64);
 		while(coorDevSerial.available() > 0) {
@@ -164,7 +164,7 @@ void *serial_data_process_thread(void* ptr) {
  * 功能：将服务器发送的控制命令发送到串口
 */
 void *serial_data_process_thread2(void* ptr) {
-	char buffer[128] = {0};
+	uint8_t buffer[128] = {0};
     int ret = 0;
 	while(1) {
 		// 接收服务器数据
@@ -184,7 +184,7 @@ void *serial_data_process_thread2(void* ptr) {
                     gettimeofday(&last_recvheartbeat_tv, NULL); // 更新心跳计时
                 } else { // 将数据发送到协调器
                     int strLen = vec[i].length();
-                    ret = coorDevSerial.write(vec[i].c_str(), strLen);
+                    ret = coorDevSerial.write((const uint8_t*)(vec[i].c_str()), strLen);
                     if(ret != strLen) {
                         cout << "Thread send socketdata to serial failed" << endl;
                     }
