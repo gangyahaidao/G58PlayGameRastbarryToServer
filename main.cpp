@@ -178,14 +178,14 @@ void *serial_data_process_thread2(void* ptr) {
             cout << "recv socket server data len = " << len << ", data = " << buffer << endl;
             string str = buffer;
             vector<string> vec;
-            SplitString(str, vec,"@"); // 按照字符进行分割，防止数据粘连
+            SplitString(str, vec, "@"); // 按照字符进行分割，防止数据粘连
             for(vector<string>::size_type i = 0; i < vec.size(); i++){
-                cout << vec[i] << " ";
                 if(vec[i].compare("#heartbeat@") == 0) { // 如果收到的是心跳数据
                     gettimeofday(&last_recvheartbeat_tv, NULL); // 更新心跳计时
                 } else { // 将数据发送到协调器
-                    ret = coorDevSerial.write((unsigned char*)buffer, len);
-                    if(ret != len) {
+                    int strLen = vec[i].length();
+                    ret = coorDevSerial.write(vec[i].c_str(), strLen);
+                    if(ret != strLen) {
                         cout << "Thread send socketdata to serial failed" << endl;
                     }
                 }
