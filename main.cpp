@@ -3,10 +3,9 @@
 
 #include "common.h"
 #include "ClientSocket.h"
-
-#define SERVER_IP "192.168.1.100"
 using namespace std;
 
+string SERVER_IP = "192.168.1.100";
 #define COORDINATOR_DEV_NAME "/dev/ttyUSB0"
 serial::Serial coorDevSerial; // 定义连接树莓派协调器的串口对象
 pthread_t serial_port_thread, serial_port_thread2;
