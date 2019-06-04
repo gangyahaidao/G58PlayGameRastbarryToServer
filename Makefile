@@ -3,7 +3,7 @@ CPPFLAGS =
 CFLAGS = -Wall -o2 
 INC_PATH = -I/usr/local/include
 
-LIBPATH = -L./
+LIBPATH = -L/usr/local/lib
 LIBS = -lpthread -lserial
 
 SRCS = $(wildcard *.cpp)
