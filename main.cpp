@@ -209,7 +209,7 @@ void SplitString(const string& s, vector<string>& v, const string& c)
     pos2 = s.find(c); // 查找字符串s中是否包含字符串c，string::npos是个特殊值
     while(string::npos != pos2)
     {
-        v.push_back(s.substr(pos1, pos2-pos1));
+        v.push_back(s.substr(pos1, pos2-pos1+c.size()));
          
         pos1 = pos2 + c.size();
         pos2 = s.find(c, pos1);
