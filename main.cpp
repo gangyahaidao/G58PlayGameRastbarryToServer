@@ -119,7 +119,7 @@ void *serial_data_process_thread2(void* ptr) {
 		int len = recv(serialSocketfd, buffer, 128, MSG_DONTWAIT); // 非阻塞接收
 		if(len > 0) { // 服务器端发送数据不能太频繁，否则数据会累积
             cout << "recv socket server data len = " << len << ", data = " << buffer << endl;
-			int ret = goodsDevSerial.write((unsigned char*)buffer, len);
+			int ret = coorDevSerial.write((unsigned char*)buffer, len);
 			if(ret != len) {
 				cout << "Thread send socketdata to serial failed" << endl;
 			}
