@@ -2,7 +2,13 @@
 #include <serial/serial.h>
 
 #include "common.h"
+#ifdef __cplusplus
+extern "C" {
+#endif
 #include "ClientSocket.h"
+#ifdef __cplusplus
+}
+#endif
 using namespace std;
 
 string SERVER_IP = "192.168.1.100";
