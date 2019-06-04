@@ -164,7 +164,7 @@ void *serial_data_process_thread(void* ptr) {
  * 功能：将服务器发送的控制命令发送到串口
 */
 void *serial_data_process_thread2(void* ptr) {
-	uint8_t buffer[128] = {0};
+	char buffer[128] = {0};
     int ret = 0;
 	while(1) {
 		// 接收服务器数据
