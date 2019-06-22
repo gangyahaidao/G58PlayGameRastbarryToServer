@@ -264,7 +264,6 @@ int sendRaspDataToServer(uint8 cmd) {
         sprintf(sendBuf, "{\"machineId\":\"%s\"}", MACHINE_ID.c_str());
         encodeData(RASTBERRY_REG, (uint8*)sendBuf, strlen(sendBuf), resultBuf, &sendDataLen); // 组装数据
         return sendTcpMsg(serialSocketfd, (char*)resultBuf, sendDataLen); // 将组装之后的数据发送出去
-        exit(0);
     } else if(cmd == RASTBERRY_HEART_BEAT) { // 树莓派发送心跳命令
         encodeData(RASTBERRY_HEART_BEAT, NULL, 0, resultBuf, &sendDataLen); // 组装数据
         return sendTcpMsg(serialSocketfd, (char*)resultBuf, sendDataLen); // 将组装之后的数据发送出去
@@ -290,7 +289,7 @@ void encodeData(uint8 cmd, uint8* content, uint8 contentLen, uint8* outputBuf, u
     // calculate xor
     uint8 XOR = sendBuf[1];
     int i = 0;
-    for(i = 2; i < index; i++) {
+    for(i = 2; i < index-1; i++) {
         XOR = XOR ^ sendBuf[i];
         printf("i = %d, XOR = %d\n", i, XOR);
     }
