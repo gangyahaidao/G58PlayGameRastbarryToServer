@@ -11,6 +11,12 @@ extern "C" {
 #endif
 using namespace std;
 
+#define uint8 unsigned char
+#define HEAD_BYTE 0x7E
+#define RASTBERRY_REG 0x10 // 树莓派注册命令
+#define RASTBERRY_HEART_BEAT 0x11 // 树莓派心跳
+#define REPLY_RASTBERRY_HEART_BEAT 0x12 // 服务器回复的树莓派心跳
+
 #define COORDINATOR_DEV_NAME "/dev/ttyUSB0"
 serial::Serial coorDevSerial; // 定义连接树莓派协调器的串口对象
 pthread_t serial_port_thread, serial_port_thread2;
@@ -23,10 +29,14 @@ string MACHINE_ID = "1";
 bool myopen_port(serial::Serial& ser, std::string port_name, int baudrate);
 void *serial_data_process_thread(void* ptr);
 void *serial_data_process_thread2(void* ptr);
-int sendSerialDateToServer(string content);
+int sendRaspDataToServer(uint8 cmd);
 void SplitString(const string& s, vector<string>& v, const string& c);
 
-void testStirngSplit(void);
+void encodeData(uint8 cmd, uint8* content, uint8 contentLen, uint8* outputBuf, uint* outputLen);
+
+uint8* re_replace_data(uint8* buffer, int length, uint8* destArr, int* destLengthPtr);
+bool check_xor(char* destArr, int length);
+
 
 int main(int argc, char* argv[]) 
 {
@@ -83,7 +93,7 @@ int main(int argc, char* argv[])
 	}
 
     // 5.发送socket初始注册消息
-    ret = sendSerialDateToServer("reg");
+    ret = sendRaspDataToServer(RASTBERRY_REG);
 	if(ret > 0) {
 		cout << "Send socket register cmd success" << endl;
 	}
@@ -97,7 +107,8 @@ int main(int argc, char* argv[])
         // 每隔一秒钟发送一次心跳到服务器
         gettimeofday(&current_tv, NULL);
 		if((current_tv.tv_sec - last_sendheartbeat_tv.tv_sec) >= 1) {
-			sendSerialDateToServer("heartbeat"); // 发送货柜串口心跳
+            // 发送树莓派心跳到服务器
+            sendRaspDataToServer(RASTBERRY_HEART_BEAT);
 			gettimeofday(&last_sendheartbeat_tv, NULL);
 		}
 
@@ -112,8 +123,8 @@ int main(int argc, char* argv[])
 				cout << "Reconnect to server failed" << endl;
 			}else{ // 连接成功，发送货柜串口注册消息
 				cout << "Reconenct to server success, send register cmd again" << endl;
-				sendSerialDateToServer("reg");
-				sendSerialDateToServer("heartbeat"); // 发送货柜串口心跳
+				sendRaspDataToServer(RASTBERRY_REG);
+				sendRaspDataToServer(RASTBERRY_HEART_BEAT); // 发送货柜串口心跳
 			}            
 			gettimeofday(&last_recvheartbeat_tv, NULL); // 更新时间，避免断开之后不停地重连
 		}
@@ -155,9 +166,9 @@ void *serial_data_process_thread(void* ptr) {
 	while(1) {
 		bzero(data_buf, 64);
 		while(coorDevSerial.available() > 0) {
-			int rd_len = coorDevSerial.read(data_buf, coorDevSerial.available());
-            cout << "recv coor serialport dataLen = " << rd_len << ", = " << data_buf << endl;
-			sendTcpMsg(serialSocketfd, (char*)data_buf, rd_len); // 将接收到的数据发送到服务器
+			int rd_len = coorDevSerial.read(data_buf, coorDevSerial.available());            
+			sendTcpMsg(serialSocketfd, (char*)data_buf, rd_len); // 将接收到的数据原样发送到服务器
+            cout << "recv coor serialport dataLen = " << rd_len << ", = " << endl;
 		}		
 		usleep(1000*10); // 休眠ms
 	}
@@ -168,33 +179,55 @@ void *serial_data_process_thread(void* ptr) {
  * zigbee串口线程2
  * 功能：将服务器发送的控制命令发送到串口
 */
+
 void *serial_data_process_thread2(void* ptr) {
-	char buffer[128] = {0};
+	uint8 byteValue = 0;
     int ret = 0;
+    bool recv_head = false;
+    bool recv_tail = false;
+    uint8 buffer[128] = {0};    
+    uint8 recvLen = 0;
+    uint8 outputBuffer[128] = 0;
+    uint8 outputLen = 0;
+
 	while(1) {
 		// 接收服务器数据
 		if(serialSocketfd == -1) {
 			sleep(2);
 			continue;
 		}
-		bzero(buffer, 128);
-		int len = recv(serialSocketfd, buffer, 128, 0);
-		if(len > 0) { // 服务器端发送数据不能太频繁，否则数据会累积
-            cout << "recv socket server data len = " << len << ", data = " << buffer << endl;
-            string str = buffer;
-            vector<string> vec;
-            SplitString(str, vec, "@"); // 按照字符进行分割，防止数据粘连
-            for(vector<string>::size_type i = 0; i < vec.size(); i++){
-                if(vec[i].compare("#heartbeat@") == 0) { // 如果收到的是心跳数据
-                    gettimeofday(&last_recvheartbeat_tv, NULL); // 更新心跳计时
-                } else { // 将数据发送到协调器
-                    int strLen = vec[i].length();
-                    ret = coorDevSerial.write((const uint8_t*)(vec[i].c_str()), strLen);
-                    if(ret != strLen) {
-                        cout << "Thread send socketdata to serial failed" << endl;
-                    }
+		int len = recv(serialSocketfd, &byteValue, 1, 0);
+		if(len > 0) {
+            cout << "recv socket server data len = " << len << ", byteValue = " << byteValue << endl;
+            if(byteValue == HEAD_BYTE) {
+                if(!recv_head) { // 第一次收到开始标识
+                    recv_head = true;
+                } else {
+                    recv_tail = true;
                 }
-            }                			
+            }
+            buffer[recvLen++] = byteValue;
+            if(recv_head && recv_tail) { // 收到一帧完整的数据                
+                re_replace_data(buffer, recvLen-1, outputBuffer, &outputLen); // 还原被替换的特殊数据
+                bool check = check_xor(outputBuffer, outputLen); // 数据校验
+                if(check) {
+                    uint8 cmd = outputBuffer[1];
+                    if(cmd == REPLY_RASTBERRY_HEART_BEAT) { // 服务器回复的心跳命令
+                        gettimeofday(&last_recvheartbeat_tv, NULL); // 更新连接服务器的心跳计时
+                    } else { // 是发送到协调器的数据
+                        ret = coorDevSerial.write(outputBuffer, outputLen);
+                        if(ret != outputLen) {
+                            cout << "Thread send socketdata to serial failed" << endl;
+                        }
+                    }                    
+                } else {
+                    cout << "check failed" << endl;
+                }
+                recv_head = false;
+                recv_tail = false;
+                bzero(buffer, 128);
+                bzero(outputBuffer, 128);
+            }             			
 		} else {
 			usleep(1000*10); // 休眠ms
 		}		
@@ -221,17 +254,102 @@ void SplitString(const string& s, vector<string>& v, const string& c)
         v.push_back(s.substr(pos1));
 }
 
-int sendSerialDateToServer(string content) {
-	char sendBuf[64] = {0};
-	sprintf(sendBuf, "#{\"machineId\":\"%s\",\"type\":\"%s\"}@", MACHINE_ID.c_str(), content.c_str());
-	return sendTcpMsg(serialSocketfd, sendBuf, strlen(sendBuf));
+#define SEND_BUF_SIZE 64
+int sendRaspDataToServer(uint8 cmd) {
+	char sendBuf[SEND_BUF_SIZE] = {0};
+    char resultBuf[SEND_BUF_SIZE] = {0};
+    uint8 sendDataLen = 0;
+
+    if(cmd == RASTBERRY_REG) { // 树莓派注册命令
+        sprintf(sendBuf, "{\"machineId\":\"%s\"}", MACHINE_ID.c_str());
+        encodeData(RASTBERRY_REG, sendBuf, strlen(sendBuf), resultBuf, &sendDataLen); // 组装数据
+
+        return sendTcpMsg(serialSocketfd, resultBuf, sendDataLen); // 将组装之后的数据发送出去
+    } else if(cmd == RASTBERRY_HEART_BEAT) { // 树莓派发送心跳命令
+        encodeData(RASTBERRY_HEART_BEAT, NULL, 0, resultBuf, &sendDataLen); // 组装数据
+        return sendTcpMsg(serialSocketfd, resultBuf, sendDataLen); // 将组装之后的数据发送出去
+    }
 }
 
-void testStirngSplit(void) {
-    string s = "#fjdfjkdjgf@#rrrrrrrrrrr@#llhhhhhhh";
-    vector<string> v;
-    SplitString(s, v,"@"); //可按多个字符来分隔;
-    for(vector<string>::size_type i = 0; i != v.size(); ++i)
-        cout << v[i] << "; ";
-    cout << endl;
+/**
+ * 按照协议封装数据
+ * Data Format: 0x7E + 1byteCmd + encType + 1byteLength + data[] + xor + 0x7E
+*/
+void encodeData(uint8 cmd, uint8* content, uint8 contentLen, uint8* outputBuf, uint* outputLen) {
+    uint8 sendBuf[SEND_BUF_SIZE] = {0};
+    int index = 0;
+
+    sendBuf[index++] = 0x7E;
+    sendBuf[index++] = cmd;
+    sendBuf[index++] = 0x0; // 加密方式0x0表示不加密
+    sendBuf[index++] = contentLen; // 消息体长度
+    if(content != NULL) {
+        memcpy(sendBuf+index, content, contentLen);
+        index += contentLen;
+    }    
+    // calculate xor
+    uint8 xor = sendBuf[1];
+    int i = 0;
+    for(i = 2; i < index; i++) {
+        xor = xor ^ sendBuf[i];
+    }
+    sendBuf[index++] = xor;
+    sendBuf[index] = 0x7E;
+
+    uint8 tmpOutLen = 0;
+    outputBuf[tmpOutLen++] = 0x7E;
+    for(i = 1; i < index-1; i++) {
+        if(sendBuf[i] == 0x7E) {
+            outputBuf[tmpOutLen++] = 0x7D;
+            outputBuf[tmpOutLen++] = 0x02;
+        } else if(sendBuf[i] == 0x7D) {
+            outputBuf[tmpOutLen++] = 0x7D;
+            outputBuf[tmpOutLen++] = 0x01;
+        } else {
+            outputBuf[tmpOutLen++] = sendBuf[i];
+        }
+    }
+    outputBuf[tmpOutLen] = 0x7E;
+    *outputLen = tmpOutLen;
+}
+
+/**
+ * 解析服务器发送过来的数据，步骤一：数据替换
+*/
+uint8* re_replace_data(uint8* buffer, int length, uint8* destArr, int* destLengthPtr){
+    int i = 0;
+    int j = 0;
+    for(i = 1; i < length-1; i++) {
+        if(buffer[i] == 0x7D && buffer[i+1] == 0x02) {
+            destArr[j++] = 0x7E;
+            i++;
+        } else if(buffer[i] == 0x7D && buffer[i+1] == 0x01) {
+            destArr[j++] = 0x7D;
+            i++;
+        } else {
+            destArr[j++] = buffer[i];
+        }
+    }
+    *destLengthPtr = j-1;
+
+    return destArr;
+}
+/**
+ * 解析服务器发送过来的数据，步骤二：数据校验
+*/
+bool check_xor(char* destArr, int length) {
+    uint8 xor = destArr[length-2];
+    uint8 contentLen = destArr[3];
+
+    if(contentLen > 0) {
+        uint8 calculate = destArr[1];
+        int i = 0;
+        for(i = 2; i < length-2; i++) {
+            calculate = calculate ^ destArr[i];
+        }
+        if(xor != calculate) {
+            return false;
+        }
+    }
+    return true;
 }
