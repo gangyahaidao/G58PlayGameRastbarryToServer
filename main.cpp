@@ -32,10 +32,10 @@ void *serial_data_process_thread2(void* ptr);
 int sendRaspDataToServer(uint8 cmd);
 void SplitString(const string& s, vector<string>& v, const string& c);
 
-void encodeData(uint8 cmd, uint8* content, uint8 contentLen, uint8* outputBuf, uint* outputLen);
+void encodeData(uint8 cmd, uint8* content, uint8 contentLen, uint8* outputBuf, uint8* outputLen);
 
-uint8* re_replace_data(uint8* buffer, int length, uint8* destArr, int* destLengthPtr);
-bool check_xor(char* destArr, int length);
+uint8* re_replace_data(uint8* buffer, uint8 length, uint8* destArr, uint8* destLengthPtr);
+bool check_xor(uint8* destArr, uint8 length);
 
 
 int main(int argc, char* argv[]) 
@@ -187,7 +187,7 @@ void *serial_data_process_thread2(void* ptr) {
     bool recv_tail = false;
     uint8 buffer[128] = {0};    
     uint8 recvLen = 0;
-    uint8 outputBuffer[128] = 0;
+    uint8 outputBuffer[128] = {0};
     uint8 outputLen = 0;
 
 	while(1) {
@@ -275,7 +275,7 @@ int sendRaspDataToServer(uint8 cmd) {
  * 按照协议封装数据
  * Data Format: 0x7E + 1byteCmd + encType + 1byteLength + data[] + xor + 0x7E
 */
-void encodeData(uint8 cmd, uint8* content, uint8 contentLen, uint8* outputBuf, uint* outputLen) {
+void encodeData(uint8 cmd, uint8* content, uint8 contentLen, uint8* outputBuf, uint8* outputLen) {
     uint8 sendBuf[SEND_BUF_SIZE] = {0};
     int index = 0;
 
@@ -288,12 +288,12 @@ void encodeData(uint8 cmd, uint8* content, uint8 contentLen, uint8* outputBuf, u
         index += contentLen;
     }    
     // calculate xor
-    uint8 xor = sendBuf[1];
+    uint8 XOR = sendBuf[1];
     int i = 0;
     for(i = 2; i < index; i++) {
-        xor = xor ^ sendBuf[i];
+        XOR = XOR ^ sendBuf[i];
     }
-    sendBuf[index++] = xor;
+    sendBuf[index++] = XOR;
     sendBuf[index] = 0x7E;
 
     uint8 tmpOutLen = 0;
@@ -316,7 +316,7 @@ void encodeData(uint8 cmd, uint8* content, uint8 contentLen, uint8* outputBuf, u
 /**
  * 解析服务器发送过来的数据，步骤一：数据替换
 */
-uint8* re_replace_data(uint8* buffer, int length, uint8* destArr, int* destLengthPtr){
+uint8* re_replace_data(uint8* buffer, uint8 length, uint8* destArr, uint8* destLengthPtr){
     int i = 0;
     int j = 0;
     for(i = 1; i < length-1; i++) {
@@ -337,8 +337,8 @@ uint8* re_replace_data(uint8* buffer, int length, uint8* destArr, int* destLengt
 /**
  * 解析服务器发送过来的数据，步骤二：数据校验
 */
-bool check_xor(char* destArr, int length) {
-    uint8 xor = destArr[length-2];
+bool check_xor(uint8* destArr, uint8 length) {
+    uint8 XOR = destArr[length-2];
     uint8 contentLen = destArr[3];
 
     if(contentLen > 0) {
@@ -347,7 +347,7 @@ bool check_xor(char* destArr, int length) {
         for(i = 2; i < length-2; i++) {
             calculate = calculate ^ destArr[i];
         }
-        if(xor != calculate) {
+        if(XOR != calculate) {
             return false;
         }
     }
