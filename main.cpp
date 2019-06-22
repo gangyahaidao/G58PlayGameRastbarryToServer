@@ -254,7 +254,7 @@ void SplitString(const string& s, vector<string>& v, const string& c)
         v.push_back(s.substr(pos1));
 }
 
-#define SEND_BUF_SIZE 64
+#define SEND_BUF_SIZE 128
 int sendRaspDataToServer(uint8 cmd) {
 	char sendBuf[SEND_BUF_SIZE] = {0};
     uint8 resultBuf[SEND_BUF_SIZE] = {0};
@@ -263,8 +263,8 @@ int sendRaspDataToServer(uint8 cmd) {
     if(cmd == RASTBERRY_REG) { // 树莓派注册命令
         sprintf(sendBuf, "{\"machineId\":\"%s\"}", MACHINE_ID.c_str());
         encodeData(RASTBERRY_REG, (uint8*)sendBuf, strlen(sendBuf), resultBuf, &sendDataLen); // 组装数据
-
         return sendTcpMsg(serialSocketfd, (char*)resultBuf, sendDataLen); // 将组装之后的数据发送出去
+        exit(0);
     } else if(cmd == RASTBERRY_HEART_BEAT) { // 树莓派发送心跳命令
         encodeData(RASTBERRY_HEART_BEAT, NULL, 0, resultBuf, &sendDataLen); // 组装数据
         return sendTcpMsg(serialSocketfd, (char*)resultBuf, sendDataLen); // 将组装之后的数据发送出去
@@ -292,10 +292,11 @@ void encodeData(uint8 cmd, uint8* content, uint8 contentLen, uint8* outputBuf, u
     int i = 0;
     for(i = 2; i < index; i++) {
         XOR = XOR ^ sendBuf[i];
-        printf("XOR = %d\n", XOR);
+        printf("i = %d, XOR = %d\n", i, XOR);
     }
     sendBuf[index++] = XOR;
     sendBuf[index] = 0x7E;
+    printf("index = %d\n", index);
 
     for(i = 0; i < index; i++) {
         printf("buf[%d] = 0x%x\n", i, sendBuf[i]);
