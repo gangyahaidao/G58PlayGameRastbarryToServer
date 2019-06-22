@@ -256,15 +256,15 @@ void SplitString(const string& s, vector<string>& v, const string& c)
 
 #define SEND_BUF_SIZE 64
 int sendRaspDataToServer(uint8 cmd) {
-	uint8 sendBuf[SEND_BUF_SIZE] = {0};
+	char sendBuf[SEND_BUF_SIZE] = {0};
     uint8 resultBuf[SEND_BUF_SIZE] = {0};
     uint8 sendDataLen = 0;
 
     if(cmd == RASTBERRY_REG) { // 树莓派注册命令
         sprintf(sendBuf, "{\"machineId\":\"%s\"}", MACHINE_ID.c_str());
-        encodeData(RASTBERRY_REG, sendBuf, strlen(sendBuf), resultBuf, &sendDataLen); // 组装数据
+        encodeData(RASTBERRY_REG, (uint8*)sendBuf, strlen(sendBuf), resultBuf, &sendDataLen); // 组装数据
 
-        return sendTcpMsg(serialSocketfd, resultBuf, sendDataLen); // 将组装之后的数据发送出去
+        return sendTcpMsg(serialSocketfd, (char*)resultBuf, sendDataLen); // 将组装之后的数据发送出去
     } else if(cmd == RASTBERRY_HEART_BEAT) { // 树莓派发送心跳命令
         encodeData(RASTBERRY_HEART_BEAT, NULL, 0, resultBuf, &sendDataLen); // 组装数据
         return sendTcpMsg(serialSocketfd, resultBuf, sendDataLen); // 将组装之后的数据发送出去
