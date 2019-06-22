@@ -267,7 +267,7 @@ int sendRaspDataToServer(uint8 cmd) {
         return sendTcpMsg(serialSocketfd, (char*)resultBuf, sendDataLen); // 将组装之后的数据发送出去
     } else if(cmd == RASTBERRY_HEART_BEAT) { // 树莓派发送心跳命令
         encodeData(RASTBERRY_HEART_BEAT, NULL, 0, resultBuf, &sendDataLen); // 组装数据
-        return sendTcpMsg(serialSocketfd, resultBuf, sendDataLen); // 将组装之后的数据发送出去
+        return sendTcpMsg(serialSocketfd, (uint8*)resultBuf, sendDataLen); // 将组装之后的数据发送出去
     }
 }
 
