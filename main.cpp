@@ -48,7 +48,7 @@ int main(int argc, char* argv[])
     getline(file, MACHINE_ID);
     file.close();
     // 1.初始化socket连接服务器
-    cout << "connect to server ip = " << SERVER_IP << ", MACHINE_ID = " << MACHINE_ID << endl;
+    cout << "connect to server ip = " << SERVER_IP << ", port = " << server_port << ", MACHINE_ID = " << MACHINE_ID << endl;
 
     while(1) {
         ret = init_tcp_socket_client_block(&serialSocketfd, SERVER_IP.c_str(), server_port); // 192.168.2.105  www.g58mall.com
