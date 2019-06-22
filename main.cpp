@@ -256,8 +256,8 @@ void SplitString(const string& s, vector<string>& v, const string& c)
 
 #define SEND_BUF_SIZE 64
 int sendRaspDataToServer(uint8 cmd) {
-	char sendBuf[SEND_BUF_SIZE] = {0};
-    char resultBuf[SEND_BUF_SIZE] = {0};
+	uint8 sendBuf[SEND_BUF_SIZE] = {0};
+    uint8 resultBuf[SEND_BUF_SIZE] = {0};
     uint8 sendDataLen = 0;
 
     if(cmd == RASTBERRY_REG) { // 树莓派注册命令
