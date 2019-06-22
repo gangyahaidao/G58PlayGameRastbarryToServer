@@ -41,8 +41,8 @@ bool check_xor(uint8* destArr, uint8 length);
 int main(int argc, char* argv[]) 
 {
     int ret = 0;
-    string SERVER_IP = "192.168.1.100";
-    int server_port = 9878;
+    string SERVER_IP = "192.168.1.103";
+    int server_port = 18888;
     fstream file("./server_ip.conf");//创建一个fstream文件流对象
 	getline(file, SERVER_IP);
     getline(file, MACHINE_ID);
