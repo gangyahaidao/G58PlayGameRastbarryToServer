@@ -133,7 +133,6 @@ int main(int argc, char* argv[])
             // 发送树莓派心跳到服务器
             sendRaspDataToServer(RASTBERRY_HEART_BEAT);
 			gettimeofday(&last_sendheartbeat_tv, NULL);
-            printf("send heartbeat\n");
 		}
 
         // 及时判断服务器是否断开了连接，断开之后能自定进行连接
@@ -223,7 +222,7 @@ void *serial_data_process_thread2(void* ptr) {
 		}
 		int len = recv(serialSocketfd, &byteValue, 1, 0);
 		if(len > 0) {
-            printf("recv byteValue = 0x%x\n", byteValue);
+            // printf("recv byteValue = 0x%x\n", byteValue);
             if(byteValue == HEAD_BYTE) {
                 if(!recv_head) { // 第一次收到开始标识
                     recv_head = true;
@@ -234,20 +233,13 @@ void *serial_data_process_thread2(void* ptr) {
             if(recv_head) { // 避免接收无效的数据
                 buffer[recvLen++] = byteValue;
             }            
-            printf("recvLen = %d\n", recvLen);
             if(recvLen >= 6 && recv_head && recv_tail) { // 收到一帧完整的数据，至少有6个字节
                 re_replace_data(buffer, recvLen, outputBuffer, &outputLen); // 还原被替换的特殊数据
-                int i = 0;
-                for(i = 0; i < outputLen; i++) {
-                    printf("after replace data[%d] = 0x%x\n", i, outputBuffer[i]);
-                }
                 bool check = check_xor(outputBuffer, outputLen); // 数据校验
                 if(check) {
-                    printf("XOR check success\n");
                     uint8 cmd = outputBuffer[1];
                     if(cmd == REPLY_RASTBERRY_HEART_BEAT) { // 服务器回复的心跳命令
                         gettimeofday(&last_recvheartbeat_tv, NULL); // 更新连接服务器的心跳计时
-                        printf("recv server reply heartbeat\n");
                     } else { // 是发送到协调器的数据
                         ret = coorDevSerial.write(outputBuffer, outputLen);
                         if(ret != outputLen) {
@@ -255,7 +247,7 @@ void *serial_data_process_thread2(void* ptr) {
                         }
                     }                    
                 } else {
-                    cout << "check failed" << endl;
+                    cout << "XOR check failed" << endl;
                 }
                 recv_head = false;
                 recv_tail = false;
@@ -326,15 +318,9 @@ void encodeData(uint8 cmd, uint8* content, uint8 contentLen, uint8* outputBuf, u
     int i = 0;
     for(i = 2; i < index; i++) {
         XOR ^= sendBuf[i];
-        // printf("i = %d, XOR = %d\n", i, XOR);
     }
     sendBuf[index++] = XOR;
     sendBuf[index++] = 0x7E;
-
-    // for(i = 0; i < index; i++) {
-    //     printf("buf[%d] = 0x%x\n", i, sendBuf[i]);
-    // }
-
     uint8 tmpOutLen = 0;
     outputBuf[tmpOutLen++] = 0x7E;
     for(i = 1; i < index-1; i++) {
