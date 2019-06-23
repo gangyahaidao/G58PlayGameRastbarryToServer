@@ -314,7 +314,7 @@ void encodeData(uint8 cmd, uint8* content, uint8 contentLen, uint8* outputBuf, u
     printf("index1 = %d\n", index);
     uint8 XOR = sendBuf[1];
     int i = 0;
-    for(i = 2; i < index-1; i++) {
+    for(i = 2; i < index; i++) {
         XOR ^= sendBuf[i];
         printf("i = %d, XOR = %d\n", i, XOR);
     }
