@@ -190,7 +190,7 @@ void *serial_data_process_thread(void* ptr) {
 		bzero(data_buf, 64);
 		while(coorDevSerial.available() > 0) {
 			int rd_len = coorDevSerial.read(data_buf, coorDevSerial.available());            
-			sendTcpDataWithSemph(serialSocketfd, (char*)data_buf, rd_len); // 将接收到的数据原样发送到服务器
+			// sendTcpDataWithSemph(serialSocketfd, (char*)data_buf, rd_len); // 将接收到的数据原样发送到服务器
             cout << "recv coor serialport dataLen = " << rd_len << ", = " << endl;
 		}		
 		usleep(1000*10); // 休眠ms
