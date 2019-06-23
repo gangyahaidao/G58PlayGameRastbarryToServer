@@ -191,7 +191,7 @@ void *serial_data_process_thread(void* ptr) {
 		while(coorDevSerial.available() > 0) {
 			int rd_len = coorDevSerial.read(data_buf, coorDevSerial.available());
             uint8 tmpBuf[8] = {HEAD_BYTE, 'F', 'F', 'F', 'F', 'F', 'F', HEAD_BYTE};
-			sendTcpDataWithSemph(serialSocketfd, (char*)tmpBuf, 5); // 将接收到的数据原样发送到服务器
+			sendTcpDataWithSemph(serialSocketfd, (char*)tmpBuf,8); // 将接收到的数据原样发送到服务器
             cout << "send serialport data = " << tmpBuf << endl;
 		}		
 		usleep(1000*10); // 休眠ms
@@ -428,13 +428,11 @@ int sendTcpDataWithSemph(int clientSocketfd, char* sendServerMsg, int len) {
     if (!semaphore_p(semid)) {
         exit(EXIT_FAILURE);
     }
-    printf("enter semph\n");
     int ret = sendTcpMsg(clientSocketfd, sendServerMsg, len);
     // 离开临界区
     if (!semaphore_v(semid))
     {
         exit(EXIT_FAILURE);
     }
-    printf("exit semph\n");
     return ret;
 } 
