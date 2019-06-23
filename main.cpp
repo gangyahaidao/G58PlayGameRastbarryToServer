@@ -400,7 +400,7 @@ int semaphore_p(int sem_id)
     sem_b.sem_flg = SEM_UNDO;
     if (semop(sem_id, &sem_b, 1) == -1)
     {
-        ERR("semaphore_p failed\n");
+        perror("semaphore_p failed");
     }
 
     return 1;
@@ -414,7 +414,7 @@ int semaphore_v(int sem_id)
     sem_b.sem_flg = SEM_UNDO;
     if (semop(sem_id, &sem_b, 1) == -1)
     {
-        ERR("semaphore_v failed\n");
+        perror("semaphore_v failed");
     }
 
     return 1;
