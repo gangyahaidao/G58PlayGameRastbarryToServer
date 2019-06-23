@@ -18,6 +18,11 @@
 #include <algorithm>
 #include <fstream>
 
+#include <sys/types.h>
+#include <sys/shm.h>
+#include <sys/ipc.h>
+#include <sys/sem.h>
+
 /**
  * 返回时间秒
  * */

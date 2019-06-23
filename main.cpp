@@ -26,6 +26,9 @@ struct timeval last_recvheartbeat_tv; // 上一次收到心跳的时间
 struct timeval current_tv;
 string MACHINE_ID = "1";
 
+// 互斥锁变量
+int semid;
+
 bool myopen_port(serial::Serial& ser, std::string port_name, int baudrate);
 void *serial_data_process_thread(void* ptr);
 void *serial_data_process_thread2(void* ptr);
@@ -37,6 +40,10 @@ void encodeData(uint8 cmd, uint8* content, uint8 contentLen, uint8* outputBuf, u
 uint8* re_replace_data(uint8* buffer, uint8 length, uint8* destArr, uint8* destLengthPtr);
 bool check_xor(uint8* destArr, uint8 length);
 
+void del_semvalue(int sem_id);
+int semaphore_p(int sem_id);
+int semaphore_v(int sem_id);
+int sendTcpDataWithSemph(int clientSocketfd, char* sendServerMsg, int len);
 
 int main(int argc, char* argv[]) 
 {
@@ -47,9 +54,25 @@ int main(int argc, char* argv[])
 	getline(file, SERVER_IP);
     getline(file, MACHINE_ID);
     file.close();
+
+    // 创建一个二值信号量用于socket发送数据互斥
+    if((semid=semget((key_t)123456,1,0666|IPC_CREAT)) == -1)
+	{//创建一个二值信号量,用于进程间同步
+		printf("semget() error");
+		exit(EXIT_FAILURE);
+	}
+	if (semctl(semid, 0, SETVAL, 1) == -1)//信号量初始化为1，为可用状态
+	{// 用于初始化信号量
+		printf("sem init error");
+        if(semctl(semid,0,IPC_RMID,0) != 0)
+		{
+            printf("semctl() IPC_RMID error");
+		}
+        exit(EXIT_FAILURE);
+	}
+
     // 1.初始化socket连接服务器
     cout << "connect to server ip = " << SERVER_IP << ", port = " << server_port << ", MACHINE_ID = " << MACHINE_ID << endl;
-
     while(1) {
         ret = init_tcp_socket_client_block(&serialSocketfd, SERVER_IP.c_str(), server_port); // 192.168.2.105  www.g58mall.com
         if(ret < 0) {
@@ -167,7 +190,7 @@ void *serial_data_process_thread(void* ptr) {
 		bzero(data_buf, 64);
 		while(coorDevSerial.available() > 0) {
 			int rd_len = coorDevSerial.read(data_buf, coorDevSerial.available());            
-			sendTcpMsg(serialSocketfd, (char*)data_buf, rd_len); // 将接收到的数据原样发送到服务器
+			sendTcpDataWithSemph(serialSocketfd, (char*)data_buf, rd_len); // 将接收到的数据原样发送到服务器
             cout << "recv coor serialport dataLen = " << rd_len << ", = " << endl;
 		}		
 		usleep(1000*10); // 休眠ms
@@ -263,10 +286,10 @@ int sendRaspDataToServer(uint8 cmd) {
     if(cmd == RASTBERRY_REG) { // 树莓派注册命令
         sprintf(sendBuf, "{\"machineId\":\"%s\"}", MACHINE_ID.c_str());
         encodeData(RASTBERRY_REG, (uint8*)sendBuf, strlen(sendBuf), resultBuf, &sendDataLen); // 组装数据
-        return sendTcpMsg(serialSocketfd, (char*)resultBuf, sendDataLen); // 将组装之后的数据发送出去
+        return sendTcpDataWithSemph(serialSocketfd, (char*)resultBuf, sendDataLen); // 将组装之后的数据发送出去
     } else if(cmd == RASTBERRY_HEART_BEAT) { // 树莓派发送心跳命令
         encodeData(RASTBERRY_HEART_BEAT, NULL, 0, resultBuf, &sendDataLen); // 组装数据
-        return sendTcpMsg(serialSocketfd, (char*)resultBuf, sendDataLen); // 将组装之后的数据发送出去
+        return sendTcpDataWithSemph(serialSocketfd, (char*)resultBuf, sendDataLen); // 将组装之后的数据发送出去
     }
 }
 
@@ -359,3 +382,57 @@ bool check_xor(uint8* destArr, uint8 length) {
     }
     return true;
 }
+
+void del_semvalue(int sem_id)
+{
+    // 删除信号量
+    if (semctl(sem_id, 0, IPC_RMID, 0) == -1)
+    {
+        ERR("Failed to delete semaphore\n");
+    }
+}
+int semaphore_p(int sem_id)
+{
+    // 对信号量做减1操作，即等待P（sv）
+    struct sembuf sem_b;
+    sem_b.sem_num = 0;
+    sem_b.sem_op = -1;//P()
+    sem_b.sem_flg = SEM_UNDO;
+    if (semop(sem_id, &sem_b, 1) == -1)
+    {
+        ERR("semaphore_p failed\n");
+    }
+
+    return 1;
+}
+int semaphore_v(int sem_id)
+{
+    // 这是一个释放操作，它使信号量变为可用，即发送信号V（sv）
+    struct sembuf sem_b;
+    sem_b.sem_num = 0;
+    sem_b.sem_op = 1; // V()
+    sem_b.sem_flg = SEM_UNDO;
+    if (semop(sem_id, &sem_b, 1) == -1)
+    {
+        ERR("semaphore_v failed\n");
+    }
+
+    return 1;
+}
+/**
+ * 增加互斥功能的tcp发送函数，防止数据混乱
+*/
+int sendTcpDataWithSemph(int clientSocketfd, char* sendServerMsg, int len) {    
+    // 进入临界区
+    if (!semaphore_p(semid))
+    {
+        exit(EXIT_FAILURE);
+    }
+        int ret = sendTcpMsg(clientSocketfd, sendServerMsg, len);
+    // 离开临界区
+    if (!semaphore_v(semid))
+    {
+        exit(EXIT_FAILURE);
+    }
+    return ret;
+} 
