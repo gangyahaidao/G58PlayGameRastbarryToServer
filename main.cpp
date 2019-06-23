@@ -190,8 +190,7 @@ void *serial_data_process_thread(void* ptr) {
 		bzero(data_buf, 64);
 		while(coorDevSerial.available() > 0) {
 			int rd_len = coorDevSerial.read(data_buf, coorDevSerial.available());
-            uint8 tmpBuf[8] = {HEAD_BYTE, 'F', 'F', 0x0, 'F', 'F', 'F', HEAD_BYTE};
-			int ret = sendTcpDataWithSemph(serialSocketfd, (char*)tmpBuf,8); // 将接收到的数据原样发送到服务器
+			int ret = sendTcpDataWithSemph(serialSocketfd, (char*)data_buf, rd_len); // 将接收到的数据原样发送到服务器
             cout << "send serialport data len = " << ret << endl;
 		}		
 		usleep(1000*10); // 休眠ms
