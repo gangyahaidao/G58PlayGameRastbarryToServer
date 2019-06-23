@@ -227,10 +227,8 @@ void *serial_data_process_thread2(void* ptr) {
             if(byteValue == HEAD_BYTE) {
                 if(!recv_head) { // 第一次收到开始标识
                     recv_head = true;
-                    printf("recv head\n");
                 } else {
                     recv_tail = true;
-                    printf("recv tail\n");
                 }
             }
             if(recv_head) { // 避免接收无效的数据
@@ -247,7 +245,7 @@ void *serial_data_process_thread2(void* ptr) {
                 if(check) {
                     printf("XOR check success\n");
                     uint8 cmd = outputBuffer[1];
-                    if(cmd == REPLY_RASTBERRY_HEART_BEAT) { // 服务器回复的心跳命令                        
+                    if(cmd == REPLY_RASTBERRY_HEART_BEAT) { // 服务器回复的心跳命令
                         gettimeofday(&last_recvheartbeat_tv, NULL); // 更新连接服务器的心跳计时
                         printf("recv server reply heartbeat\n");
                     } else { // 是发送到协调器的数据
@@ -360,7 +358,7 @@ void encodeData(uint8 cmd, uint8* content, uint8 contentLen, uint8* outputBuf, u
 uint8* re_replace_data(uint8* buffer, uint8 length, uint8* destArr, uint8* destLengthPtr){
     int i = 0;
     int j = 0;
-    for(i = 1; i < length-1; i++) {
+    for(i = 0; i < length; i++) {
         if(buffer[i] == 0x7D && buffer[i+1] == 0x02) {
             destArr[j++] = 0x7E;
             i++;
@@ -372,7 +370,6 @@ uint8* re_replace_data(uint8* buffer, uint8 length, uint8* destArr, uint8* destL
         }
     }
     *destLengthPtr = j; // 替换之后的长度
-
     return destArr;
 }
 /**
