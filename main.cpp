@@ -192,8 +192,8 @@ void *serial_data_process_thread(void* ptr) {
 		while(coorDevSerial.available() > 0) {
 			int rd_len = coorDevSerial.read(data_buf, coorDevSerial.available());
             uint8 tmpBuf[8] = {HEAD_BYTE, 'F', 'F', 0x0, 'F', 'F', 'F', HEAD_BYTE};
-			sendTcpDataWithSemph(serialSocketfd, (char*)tmpBuf,8); // 将接收到的数据原样发送到服务器
-            cout << "send serialport data = " << tmpBuf << endl;
+			int ret = sendTcpDataWithSemph(serialSocketfd, (char*)tmpBuf,8); // 将接收到的数据原样发送到服务器
+            cout << "send serialport data len = " << ret << endl;
 		}		
 		usleep(1000*10); // 休眠ms
 	}
@@ -223,7 +223,7 @@ void *serial_data_process_thread2(void* ptr) {
 		}
 		int len = recv(serialSocketfd, &byteValue, 1, 0);
 		if(len > 0) {
-            cout << "recv socket server data len = " << len << ", byteValue = " << byteValue << endl;
+            printf("recv byteValue = 0x%x\n", byteValue);
             if(byteValue == HEAD_BYTE) {
                 if(!recv_head) { // 第一次收到开始标识
                     recv_head = true;
@@ -321,7 +321,6 @@ void encodeData(uint8 cmd, uint8* content, uint8 contentLen, uint8* outputBuf, u
     }
     sendBuf[index++] = XOR;
     sendBuf[index++] = 0x7E;
-    printf("data length = %d\n", index);
 
     // for(i = 0; i < index; i++) {
     //     printf("buf[%d] = 0x%x\n", i, sendBuf[i]);
