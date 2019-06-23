@@ -227,13 +227,22 @@ void *serial_data_process_thread2(void* ptr) {
             if(byteValue == HEAD_BYTE) {
                 if(!recv_head) { // 第一次收到开始标识
                     recv_head = true;
+                    printf("recv head\n");
                 } else {
                     recv_tail = true;
+                    printf("recv tail\n");
                 }
             }
-            buffer[recvLen++] = byteValue;
-            if(recv_head && recv_tail) { // 收到一帧完整的数据                
-                re_replace_data(buffer, recvLen-1, outputBuffer, &outputLen); // 还原被替换的特殊数据
+            if(recv_head) { // 避免接收无效的数据
+                buffer[recvLen++] = byteValue;
+            }            
+            printf("recvLen = %d\n", recvLen);
+            if(recvLen >= 6 && recv_head && recv_tail) { // 收到一帧完整的数据，至少有6个字节
+                re_replace_data(buffer, recvLen, outputBuffer, &outputLen); // 还原被替换的特殊数据
+                int i = 0;
+                for(i = 0; i < outputLen; i++) {
+                    printf("after replace data[%d] = 0x%x\n", outputBuffer[i]);
+                }
                 bool check = check_xor(outputBuffer, outputLen); // 数据校验
                 if(check) {
                     uint8 cmd = outputBuffer[1];
@@ -360,7 +369,7 @@ uint8* re_replace_data(uint8* buffer, uint8 length, uint8* destArr, uint8* destL
             destArr[j++] = buffer[i];
         }
     }
-    *destLengthPtr = j-1;
+    *destLengthPtr = j; // 替换之后的长度
 
     return destArr;
 }
