@@ -424,15 +424,16 @@ int semaphore_v(int sem_id)
 */
 int sendTcpDataWithSemph(int clientSocketfd, char* sendServerMsg, int len) {    
     // 进入临界区
-    if (!semaphore_p(semid))
-    {
+    if (!semaphore_p(semid)) {
         exit(EXIT_FAILURE);
     }
-        int ret = sendTcpMsg(clientSocketfd, sendServerMsg, len);
+    printf("enter semph\n");
+    int ret = sendTcpMsg(clientSocketfd, sendServerMsg, len);
     // 离开临界区
     if (!semaphore_v(semid))
     {
         exit(EXIT_FAILURE);
     }
+    printf("exit semph\n");
     return ret;
 } 
