@@ -129,15 +129,16 @@ int main(int argc, char* argv[])
     while(1) {
         // 每隔一秒钟发送一次心跳到服务器
         gettimeofday(&current_tv, NULL);
-		if((current_tv.tv_sec - last_sendheartbeat_tv.tv_sec) >= 1) {
+		if((current_tv.tv_sec - last_sendheartbeat_tv.tv_sec) >= 2) {
             // 发送树莓派心跳到服务器
             sendRaspDataToServer(RASTBERRY_HEART_BEAT);
 			gettimeofday(&last_sendheartbeat_tv, NULL);
+            printf("send heartbeat\n");
 		}
 
         // 及时判断服务器是否断开了连接，断开之后能自定进行连接
         gettimeofday(&current_tv, NULL);
-		if((current_tv.tv_sec - last_recvheartbeat_tv.tv_sec) >= 5) { // 如果当前收到服务器的心跳超过指定时间，则认为断开连接，进行重连操作
+		if((current_tv.tv_sec - last_recvheartbeat_tv.tv_sec) >= 15) { // 如果当前收到服务器的心跳超过指定时间，则认为断开连接，进行重连操作
 			serialSocketfd = -1;
 			perror("Recv server heartbeat time-out");
 			close(serialSocketfd); // 关闭文件描述符
