@@ -190,7 +190,7 @@ void *serial_data_process_thread(void* ptr) {
 		bzero(data_buf, 64);
 		while(coorDevSerial.available() > 0) {
 			int rd_len = coorDevSerial.read(data_buf, coorDevSerial.available());
-            uint8 tmpBuf[5] = {HEAD_BYTE, 'F', 'F', 'F', HEAD_BYTE};
+            uint8 tmpBuf[5] = {HEAD_BYTE, 'F', 'F', 'F', 'F', 'F', 'F', HEAD_BYTE};
 			sendTcpDataWithSemph(serialSocketfd, (char*)tmpBuf, 5); // 将接收到的数据原样发送到服务器
             cout << "send serialport data = " << tmpBuf << endl;
 		}		
@@ -236,8 +236,9 @@ void *serial_data_process_thread2(void* ptr) {
                 bool check = check_xor(outputBuffer, outputLen); // 数据校验
                 if(check) {
                     uint8 cmd = outputBuffer[1];
-                    if(cmd == REPLY_RASTBERRY_HEART_BEAT) { // 服务器回复的心跳命令
+                    if(cmd == REPLY_RASTBERRY_HEART_BEAT) { // 服务器回复的心跳命令                        
                         gettimeofday(&last_recvheartbeat_tv, NULL); // 更新连接服务器的心跳计时
+                        printf("recv server reply heartbeat\n");
                     } else { // 是发送到协调器的数据
                         ret = coorDevSerial.write(outputBuffer, outputLen);
                         if(ret != outputLen) {
