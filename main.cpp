@@ -190,7 +190,7 @@ void *serial_data_process_thread(void* ptr) {
 		bzero(data_buf, 64);
 		while(coorDevSerial.available() > 0) {
 			int rd_len = coorDevSerial.read(data_buf, coorDevSerial.available());
-            uint8 tmpBuf[5] = {HEAD_BYTE, 'F', 'F', 'F', 'F', 'F', 'F', HEAD_BYTE};
+            uint8 tmpBuf[8] = {HEAD_BYTE, 'F', 'F', 'F', 'F', 'F', 'F', HEAD_BYTE};
 			sendTcpDataWithSemph(serialSocketfd, (char*)tmpBuf, 5); // 将接收到的数据原样发送到服务器
             cout << "send serialport data = " << tmpBuf << endl;
 		}		
@@ -312,20 +312,19 @@ void encodeData(uint8 cmd, uint8* content, uint8 contentLen, uint8* outputBuf, u
         index += contentLen;
     }    
     // calculate xor
-    printf("index1 = %d\n", index);
     uint8 XOR = sendBuf[1];
     int i = 0;
     for(i = 2; i < index; i++) {
         XOR ^= sendBuf[i];
-        printf("i = %d, XOR = %d\n", i, XOR);
+        // printf("i = %d, XOR = %d\n", i, XOR);
     }
     sendBuf[index++] = XOR;
     sendBuf[index++] = 0x7E;
     printf("data length = %d\n", index);
 
-    for(i = 0; i < index; i++) {
-        printf("buf[%d] = 0x%x\n", i, sendBuf[i]);
-    }
+    // for(i = 0; i < index; i++) {
+    //     printf("buf[%d] = 0x%x\n", i, sendBuf[i]);
+    // }
 
     uint8 tmpOutLen = 0;
     outputBuf[tmpOutLen++] = 0x7E;
