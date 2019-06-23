@@ -241,10 +241,11 @@ void *serial_data_process_thread2(void* ptr) {
                 re_replace_data(buffer, recvLen, outputBuffer, &outputLen); // 还原被替换的特殊数据
                 int i = 0;
                 for(i = 0; i < outputLen; i++) {
-                    printf("after replace data[%d] = 0x%x\n", outputBuffer[i]);
+                    printf("after replace data[%d] = 0x%x\n", i, outputBuffer[i]);
                 }
                 bool check = check_xor(outputBuffer, outputLen); // 数据校验
                 if(check) {
+                    printf("XOR check success\n");
                     uint8 cmd = outputBuffer[1];
                     if(cmd == REPLY_RASTBERRY_HEART_BEAT) { // 服务器回复的心跳命令                        
                         gettimeofday(&last_recvheartbeat_tv, NULL); // 更新连接服务器的心跳计时
@@ -260,6 +261,7 @@ void *serial_data_process_thread2(void* ptr) {
                 }
                 recv_head = false;
                 recv_tail = false;
+                recvLen = 0;
                 bzero(buffer, 128);
                 bzero(outputBuffer, 128);
             }             			
