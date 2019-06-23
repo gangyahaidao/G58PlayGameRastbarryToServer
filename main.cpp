@@ -287,15 +287,16 @@ void encodeData(uint8 cmd, uint8* content, uint8 contentLen, uint8* outputBuf, u
         index += contentLen;
     }    
     // calculate xor
+    printf("index1 = %d\n", index);
     uint8 XOR = sendBuf[1];
     int i = 0;
     for(i = 2; i < index-1; i++) {
-        XOR = XOR ^ sendBuf[i];
+        XOR ^= sendBuf[i];
         printf("i = %d, XOR = %d\n", i, XOR);
     }
     sendBuf[index++] = XOR;
     sendBuf[index] = 0x7E;
-    printf("index = %d\n", index);
+    printf("index2 = %d\n", index);
 
     for(i = 0; i < index; i++) {
         printf("buf[%d] = 0x%x\n", i, sendBuf[i]);
