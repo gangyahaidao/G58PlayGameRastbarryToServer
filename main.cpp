@@ -388,7 +388,7 @@ void del_semvalue(int sem_id)
     // 删除信号量
     if (semctl(sem_id, 0, IPC_RMID, 0) == -1)
     {
-        ERR("Failed to delete semaphore\n");
+        perror("Failed to delete semaphore");
     }
 }
 int semaphore_p(int sem_id)
