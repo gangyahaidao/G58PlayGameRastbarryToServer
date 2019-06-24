@@ -237,6 +237,7 @@ void *serial_data_process_thread2(void* ptr) {
                 bool check = check_xor(outputBuffer, outputLen); // 数据校验
                 if(check) {
                     uint8 cmd = outputBuffer[1];
+                    printf("recv message cmd = 0x%x\n", cmd);
                     if(cmd == REPLY_RASTBERRY_HEART_BEAT) { // 服务器回复的心跳命令
                         gettimeofday(&last_recvheartbeat_tv, NULL); // 更新连接服务器的心跳计时
                     } else { // 是发送到协调器的数据
