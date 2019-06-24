@@ -191,7 +191,7 @@ void *serial_data_process_thread(void* ptr) {
 		while(coorDevSerial.available() > 0) {
 			int rd_len = coorDevSerial.read(data_buf, coorDevSerial.available());
 			int ret = sendTcpDataWithSemph(serialSocketfd, (char*)data_buf, rd_len); // 将接收到的数据原样发送到服务器
-            cout << "send serialport data len = " << ret << ", dataBuf = " << data_buf << endl;
+            // cout << "send serialport data len = " << ret << ", dataBuf = " << data_buf << endl;
 		}		
 		usleep(1000*10); // 休眠ms
 	}
@@ -335,7 +335,7 @@ void encodeData(uint8 cmd, uint8* content, uint8 contentLen, uint8* outputBuf, u
         }
     }
     outputBuf[tmpOutLen] = 0x7E;
-    *outputLen = tmpOutLen;
+    *outputLen = tmpOutLen+1;
 }
 
 /**
